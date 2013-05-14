@@ -18,7 +18,7 @@ import time
 
 # First, we define our grid of parameters
 
-p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 2, 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0}
+p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 1.001 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0}
 
 # Then the grids for the stochastic process (transition and values)
 
@@ -75,6 +75,8 @@ egrid = np.zeros ( (4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk']) )
 egrid[0:2].fill(p_stoch['e'])
 egrid[2:].fill(-p_stoch['e'])
 
+
+
 ngrid = np.zeros ( (4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk']) )
 ngrid[0].fill(p_stoch['n'])
 ngrid[1].fill(-p_stoch['n'])
@@ -88,18 +90,22 @@ ngrid[3].fill(-p_stoch['n'])
 # a function that computes the optimal labor as a function of k,e and the parameters p
 
 def labour(k,e,p):
-    return ( (1 - p['alpha']) * np.exp(e) * (k**p['alpha']))**(1 / (p['alpha'] + p['omega'] - 1))
+    return ( (1 - p['alpha']) * np.exp(e) * (k**p['alpha']) ) ** (1 / (p['alpha'] + p['omega'] - 1))
     
 
-# utility as a function of c, l, e and the parameters p
+# utility as a function of c, l and the parameters p
 
-def utility(c,l,e,p):
-    return (( (c - (l**p['omega'])/p['omega'])**(1-p['gamma']) - 1 )) / (1 - p['gamma'])
+def utility(c,l,p):
+    if p['gamma'] == 1:
+        return np.log( c - (l**p['omega'])/p['omega'] )
+    else:
+        return (( (c - (l**p['omega'])/p['omega'])**(1-p['gamma']) - 1 )) / (1 - p['gamma'])
     
 # a function which returns the discount factor from c, l, e and the parameters p
 
-def discount(c,l,e,p):
+def discount(c,l,p):
     return np.exp(-p['beta'] * np.log(1 + c - (l**p['omega'])/p['omega'] ))
+    
     
 # production function as a function k, k', l, e and the parameters p
 
@@ -112,8 +118,10 @@ def production(k,kp,l,e,p):
 # second is the foreign asset dimension (the A dimension)
 # third is the domestic capital dimension (the k dimension)
 
-V0t = np.ones((4 , pgrid['nA'] , pgrid['nk']))
+V0t = np.zeros((4 , pgrid['nA'] , pgrid['nk']))
 V0  = V0t.reshape( (4 , pgrid['nA'] * pgrid['nk'] ) )
+
+
 
 
 # we need to build a function which given our matrices, parameters and initial value function
@@ -133,39 +141,56 @@ def new_value(k,kp,A,Ap,e,n,p,pgrid,transit,V0):
     ltemp = labour(k,e,p)
     ctemp = production(k,kp,ltemp,e,p) - kp + k * (1 - p['delta'])\
     + (1 + p['rstar'] * np.exp(n)) * A - Ap
+    cltemp = ctemp - (ltemp**(p['omega']))/p['omega']
     
-    budget_not = (ctemp <= 0)
-    ctemp[budget_not] = 1
     
-    utemp = utility(ctemp,ltemp,e,p)
-    utemp[budget_not] = -9999999999
+    budget_not = (cltemp <= 0)
     
-    #testnan = (utemp == nan )
-    #utemp[testnan] = -999999999
     
-    disc = discount(ctemp,ltemp,e,p)
+    utemp = utility(ctemp,ltemp,p)
+          
+    disc = discount(ctemp,ltemp,p)
     
-    EV0 = np.dot(transit,V0).reshape(4, pgrid['nA'] , pgrid['nk'] , 1 )
     
-    TV0 = utemp + disc * EV0[:,:,None,:,:] 
     
-    new_V0 = TV0.max(axis=2).max(axis=2)
+    EV0 = np.dot(transit,V0).reshape(4, pgrid['nA'] , pgrid['nk'] )
     
-    return  new_V0.reshape( (4 , pgrid['nA'] * pgrid['nk'] ) )
+    # EV0 transforms V0 in a matrix of shape (4,nA,nk,1)
+    # It computes the expected future value of choosing one combination of assets
+    # Given the present state (ie level of productivity and interest rate)
+    
+    TV0 = utemp + disc * EV0[:,None,:,:,None]
+    
+    TV0[budget_not] = -99999999999
+
+    
+    new_V0_temp = TV0.max(axis=3)
+    new_V0      = new_V0_temp.max(axis=2)
+    
+    return   new_V0.reshape( (4 , pgrid['nA'] * pgrid['nk'] ) )
     
 
 #TV = new_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0)
 
-for i in xrange(200):
+
+#test = new_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0)
+
+t1 = time.time()
+
+for i in xrange(300):
     
     TV = new_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0)
     
-    print abs(V0 - TV).max()
+    #print abs(V0 - TV).max()
     
     V0 = TV
-    
-import pylab
 
-y = V0[0,0:pgrid['nk']].reshape((1,10))
+t2 = time.time()
 
-pylab.plot( klin , y )
+print (t2-t1)    
+#import pylab
+
+#y = V0[0,0:pgrid['nk']].reshape((1,10))
+
+#pylab.plot( klin , y )
+
