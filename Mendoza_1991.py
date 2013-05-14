@@ -200,7 +200,7 @@ def find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0):
     
         crit = abs(V0 - TV).max()
         # print iteration
-        # print crit
+        print crit
     
         V0 = TV
     
@@ -212,7 +212,7 @@ Value = find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V
 
 import pylab
 
-Vplot = Value[0,20:(pgrid['nk']+20)].reshape(pgrid['nk'])
+Vplot = Value[0,pgrid['nk']:(pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
 kplot = klin.reshape(pgrid['nk'])
 
 pylab.plot(kplot,Vplot)
