@@ -26,7 +26,7 @@ p_stoch = {'e': 1.18/100, 'n': 0, 'rho': 0.36, 'rho_en': 0}
 
 # We define the parameters of the grids
 
-pgrid = {'kmin': 3.25, 'kmax': 3.56 , 'nk': 23, 'Amin': -1.42 , 'Amax': 0.08 , 'nA': 22 }
+pgrid = {'kmin': 3.25, 'kmax': 3.56 , 'nk': 22, 'Amin': -1.42 , 'Amax': 0.08 , 'nA': 22 }
 
  
 # We build the transition matrix that will be used
@@ -260,25 +260,25 @@ def find_solution(k,kp,A,Ap,e,n,p,pgrid,transit,V):
     #soltemp2          = ( new_V0_temp4 == TV0 )
     
     
-    #ksoltemp              = kp.copy()
-    #ksoltemp[soltemp1]     = 0
+    ksoltemp              = kp.copy()
+    ksoltemp[soltemp1]     = 0
     #ksoltemp[soltemp2]     = 1
     
-    Apsoltemp              = Ap.copy()
-    Apsoltemp[soltemp1]     = -3
+    #Apsoltemp              = Ap.copy()
+    #Apsoltemp[soltemp1]     = -3
     #ksoltemp[soltemp2]     = 1    
 
     
-    #ksoltemp2             = ksoltemp.max(axis=3)
-    #ksoltemp3             = ksoltemp2.max(axis=2)
+    ksoltemp2             = ksoltemp.max(axis=3)
+    ksoltemp3             = ksoltemp2.max(axis=2)
     
-    Apsoltemp2             = Apsoltemp.max(axis=3)
-    Apsoltemp3             = Apsoltemp2.max(axis=2)
+    #Apsoltemp2             = Apsoltemp.max(axis=3)
+    #Apsoltemp3             = Apsoltemp2.max(axis=2)
     
    
     
           
-    return Apsoltemp3 #new_V0_temp4
+    return ksoltemp3 #Apsoltemp3 
 
     
     
@@ -294,23 +294,23 @@ import pylab
 
 
 Vplot = x[0,0*pgrid['nk']:(0*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+"""
+Vplot1 = x[3,1*pgrid['nk']:(1*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
 
-Vplot1 = x[0,1*pgrid['nk']:(1*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
 
-
-Vplot2 = x[0,2*pgrid['nk']:(2*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot3 = x[0,3*pgrid['nk']:(3*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot4 = x[0,4*pgrid['nk']:(4*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot5 = x[0,5*pgrid['nk']:(5*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot6 = x[0,6*pgrid['nk']:(6*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot7 = x[0,7*pgrid['nk']:(7*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot2 = x[3,2*pgrid['nk']:(2*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot3 = x[3,3*pgrid['nk']:(3*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot4 = x[3,4*pgrid['nk']:(4*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot5 = x[3,5*pgrid['nk']:(5*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot6 = x[3,6*pgrid['nk']:(6*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot7 = x[3,7*pgrid['nk']:(7*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
 
 
 kplot = klin.reshape(pgrid['nk'])
 
 
 pylab.plot(kplot,Vplot)
-pylab.plot(kplot,Vplot1)
+"""pylab.plot(kplot,Vplot1)
 pylab.plot(kplot,Vplot2)
 pylab.plot(kplot,Vplot3)
 pylab.plot(kplot,Vplot4)
@@ -319,7 +319,7 @@ pylab.plot(kplot,Vplot6)
 pylab.plot(kplot,Vplot7)
 
 
-
+"""
     
 
 """
