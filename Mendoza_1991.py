@@ -18,17 +18,17 @@ import time
 
 # First, we define our grid of parameters
 
-p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 1.001 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0, 'epsilon': 10**(-1) }
+p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 4 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0, 'epsilon': 10**(-2) }
 
 # Then the grids for the stochastic process (transition and values)
 
-p_stoch = {'e': 0.0118, 'n': 0, 'rho': 0.36, 'rho_en': 0}
+p_stoch = {'e': 1.18/100, 'n': 0, 'rho': 0.36, 'rho_en': 0}
 
 # We define the parameters of the grids
 
-pgrid = {'kmin': 3.25 , 'kmax': 6 , 'nk': 22, 'Amin': -1.42 , 'Amax': 0.08 , 'nA': 22 }
+pgrid = {'kmin': 3.25, 'kmax': 3.56 , 'nk': 23, 'Amin': -1.42 , 'Amax': 0.08 , 'nA': 22 }
 
-#3.56
+ 
 # We build the transition matrix that will be used
 
 Pi          = (p_stoch['rho'] + 1) / 4
@@ -141,7 +141,7 @@ V0  = V0t.reshape( (4 , pgrid['nA'] * pgrid['nk'] ) )
 # on p the grid of parameters
 # on the transition matrix of the stochastic process here called transit
 
-def new_value(k,kp,A,Ap,e,n,p,pgrid,transit,V0):
+def new_value(k,kp,A,Ap,e,n,p,pgrid,transit,V):
     
     # we first need to compute the instantaneouse utility of the agent for every
     # state and possible decision he can take
@@ -167,7 +167,7 @@ def new_value(k,kp,A,Ap,e,n,p,pgrid,transit,V0):
     
     
     
-    EV0 = np.dot(transit,V0).reshape(4, pgrid['nA'] , pgrid['nk'] )
+    EV0 = np.dot(transit,V).reshape(4, pgrid['nA'] , pgrid['nk'] )
     
     # EV0 transforms V0 in a matrix of shape (4,nA,nk,1)
     # It computes the expected future value of choosing one combination of assets
@@ -212,7 +212,7 @@ Value = find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V
 
 
 
-def find_solution(k,kp,A,Ap,e,n,p,pgrid,transit,V0):
+def find_solution(k,kp,A,Ap,e,n,p,pgrid,transit,V):
     
     delt = p['delta']
     omeg = p['omega']
@@ -234,62 +234,95 @@ def find_solution(k,kp,A,Ap,e,n,p,pgrid,transit,V0):
     
     
     
-    EV0 = np.dot(transit,V0).reshape(4, pgrid['nA'] , pgrid['nk'] )
+    EV = np.dot(transit,V).reshape(4, pgrid['nA'] , pgrid['nk'] )
     
     # EV0 transforms V0 in a matrix of shape (4,nA,nk,1)
     # It computes the expected future value of choosing one combination of assets
     # Given the present state (ie level of productivity and interest rate)
     
-    TV0 = utemp + disc * EV0[:,None,:,:,None]
+    TV0 = utemp + disc * EV[:,None,:,:,None]
     
     TV0[budget_not] = -9999999
 
     
     new_V0_temp       = TV0.max(axis=3)
-    new_V0_temp2      = new_V0_temp.max(axis=2)    
-    new_V0_temp3      = new_V0_temp2.reshape( (4, pgrid['nA'], pgrid['nk']) )  
-    new_V0_temp4      = np.repeat( new_V0_temp3 , pgrid['nk'] , 1 ).reshape((4, pgrid['nA'], pgrid['nk'] , pgrid['nk']))
-    new_V0_temp5      = np.repeat( new_V0_temp4 , pgrid['nA'] , 1 ).reshape((4, pgrid['nA'],pgrid['nA'], pgrid['nk'] , pgrid['nk']))
     
-    soltemp1          = ( new_V0_temp5 <> TV0 )
-    #soltemp2          = ( new_V0_temp5 == TV0 )
+    print np.shape(new_V0_temp)
+    
+    new_V0_temp2      = new_V0_temp.max(axis=2) 
+    
+    new_V0_temp3      = new_V0_temp2.reshape( (4, pgrid['nA'], pgrid['nk']) ) 
+    new_V0_temp4      = np.repeat( new_V0_temp3 , pgrid['nk']*pgrid['nA'] , 1 ).reshape((4, pgrid['nA'],pgrid['nA'], pgrid['nk'] , pgrid['nk']))
+    
+    #print TV0 
+    
+    soltemp1          = ( new_V0_temp4 <> TV0 )
+    #soltemp2          = ( new_V0_temp4 == TV0 )
     
     
-    ksoltemp              = kpgrid
-    ksoltemp[soltemp1]     = 0
+    #ksoltemp              = kp.copy()
+    #ksoltemp[soltemp1]     = 0
     #ksoltemp[soltemp2]     = 1
     
+    Apsoltemp              = Ap.copy()
+    Apsoltemp[soltemp1]     = -3
+    #ksoltemp[soltemp2]     = 1    
 
     
-    ksoltemp2             = ksoltemp.max(axis=3)
-    ksoltemp3             = ksoltemp2.max(axis=2)
+    #ksoltemp2             = ksoltemp.max(axis=3)
+    #ksoltemp3             = ksoltemp2.max(axis=2)
+    
+    Apsoltemp2             = Apsoltemp.max(axis=3)
+    Apsoltemp3             = Apsoltemp2.max(axis=2)
     
    
     
           
-    return ksoltemp
+    return Apsoltemp3 #new_V0_temp4
+
     
     
 solution = find_solution(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,Value)
 
-"""x = solution.reshape( ( 4 , 22*22) )
+
+x = solution.reshape( ( 4 , pgrid['nk']*pgrid['nA']) )
+
 
 
 import pylab
 
+
+
 Vplot = x[0,0*pgrid['nk']:(0*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+
+Vplot1 = x[0,1*pgrid['nk']:(1*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+
+
+Vplot2 = x[0,2*pgrid['nk']:(2*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot3 = x[0,3*pgrid['nk']:(3*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot4 = x[0,4*pgrid['nk']:(4*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot5 = x[0,5*pgrid['nk']:(5*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot6 = x[0,6*pgrid['nk']:(6*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+Vplot7 = x[0,7*pgrid['nk']:(7*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
+
+
 kplot = klin.reshape(pgrid['nk'])
 
+
 pylab.plot(kplot,Vplot)
+pylab.plot(kplot,Vplot1)
+pylab.plot(kplot,Vplot2)
+pylab.plot(kplot,Vplot3)
+pylab.plot(kplot,Vplot4)
+pylab.plot(kplot,Vplot5)
+pylab.plot(kplot,Vplot6)
+pylab.plot(kplot,Vplot7)
+
+
+
+    
 
 """
-
-
-
-
-
-
-
 
 import pylab
 
@@ -297,3 +330,5 @@ Vplot = Value[3,4*pgrid['nk']:(4*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
 kplot = klin.reshape(pgrid['nk'])
 
 pylab.plot(kplot,Vplot)
+
+"""
