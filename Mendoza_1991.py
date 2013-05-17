@@ -18,7 +18,7 @@ import time
 
 # First, we define our grid of parameters
 
-p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 1.001 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0, 'epsilon': 10**(-2) }
+p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 1.001 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0, 'epsilon': 10**(-6) }
 
 # Then the grids for the stochastic process (transition and values)
 
@@ -145,7 +145,7 @@ V0  = V0t.reshape( (4 , pgrid['nA'] * pgrid['nk'] ) )
 # on p the grid of parameters
 # on the transition matrix of the stochastic process here called transit
 
-def new_value(k,kp,A,Ap,e,n,p,pgrid,transit,V):
+def bud(k,kp,A,Ap,e,n,p,pgrid):
     
     # we first need to compute the instantaneouse utility of the agent for every
     # state and possible decision he can take
@@ -159,13 +159,17 @@ def new_value(k,kp,A,Ap,e,n,p,pgrid,transit,V):
     ctemp = production(k,kp,ltemp,e,p)\
     + numexpr.evaluate( '-kp + k * (1 - delt) + (1 + rs * exp(n)) * A - Ap' )
     cltemp =  composite_consumption(ctemp,ltemp,p)
-        
-    budget_not = (cltemp <= 0)
     
     utemp = utility(cltemp,p)  
-    disc = discount(cltemp,p)
+    discountemp = discount(cltemp,p)
     
+    return np.array([utemp,discountemp,cltemp])
+
     
+
+def new_value(ut,disc,cl,transit,V,pgrid):
+    
+    budget_not = (cl <= 0)
     
     EV0 = np.dot(transit,V).reshape(4, pgrid['nA'] , pgrid['nk'] )
     
@@ -173,7 +177,7 @@ def new_value(k,kp,A,Ap,e,n,p,pgrid,transit,V):
     # It computes the expected future value of choosing one combination of assets
     # Given the present state (ie level of productivity and interest rate)
     
-    TV0 = utemp + disc * EV0[:,None,:,:,None]
+    TV0 = ut + disc * EV0[:,None,:,:,None]
     
     TV0[budget_not] = -9999999
 
@@ -184,8 +188,6 @@ def new_value(k,kp,A,Ap,e,n,p,pgrid,transit,V):
     return   new_V0.reshape( (4 , pgrid['nA'] * pgrid['nk'] ) )
     
 
-test = new_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0)
-
 
 def find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0):
     
@@ -194,21 +196,24 @@ def find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0):
     # this is done in the find_solution
     
     crit = 10
-    iteration = 0
+    #iteration = 0
+    V01 = V0.copy()
+    x = bud(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid)
+    
 
     while crit> p['epsilon']:
         
         #iteration = iteration + 1       
     
-        TV = new_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0)
+        TV = new_value(x[0],x[1],x[2],stoch_transit,V01,pgrid)
     
-        crit = abs(V0 - TV).max()
+        crit = abs(V01 - TV).max()
         # print iteration
         print crit
     
-        V0 = TV
+        V01 = TV
     
-    return V0
+    return V01
         
 #%prun -s time find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0)
 
@@ -353,12 +358,14 @@ t = np.linspace(0, ns ,ns + 1  )
 kk1 = k[0:ns]
 kk2 = k[1:ns+1]
 invsim = kk2 - (1 - p['delta']) * kk1
+
+
 """
 plt(t[0:ns],invsim)
 
+
+
 """
-
-
 
 print np.std(k)/np.mean(k)
 print np.std(invsim)/np.mean(invsim)
