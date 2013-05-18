@@ -251,10 +251,9 @@ def find_solution(k,kp,A,Ap,e,n,p,pgrid,transit,V):
     # and we determine for which couple kprime and Aprime we found these values
     # this gives our decision rules
     
-    new_V0_temp3      = new_V0_temp2.reshape( (4, pgrid['nA'], pgrid['nk']) ) 
-    new_V0_temp4      = np.repeat( new_V0_temp3 , pgrid['nk']*pgrid['nA'] , 1 ).reshape((4, pgrid['nA'],pgrid['nA'], pgrid['nk'] , pgrid['nk']))
+    new_V0_temp3      = np.repeat( new_V0_temp2 , pgrid['nk']*pgrid['nA'] , 1 ).reshape((4, pgrid['nA'],pgrid['nA'], pgrid['nk'] , pgrid['nk']))
     
-    soltemp1          = ( new_V0_temp4 <> TV0 )    
+    soltemp1          = ( new_V0_temp3 <> TV0 )    
     
     ksoltemp              = kp.copy()
     ksoltemp[soltemp1]     = 0
@@ -329,7 +328,7 @@ def simulation_output(kpd,Apd,pgrid,transit,nsim,kindex,Aindex,sindex):
     return np.array([ksim,Asim,ssim])
     
 
-ns = 100
+ns = 10000
     
 simulation_result = simulation_output(kpdecided,Apdecided,pgrid,stoch_transit,ns,10,10,2)
 
@@ -369,52 +368,3 @@ plt(t[0:ns],invsim)
 
 print np.std(k)/np.mean(k)
 print np.std(invsim)/np.mean(invsim)
-
-
-
-
-
-
-
-
-"""import pylab
-
-
-
-Vplot = x[0,0*pgrid['nk']:(0*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-
-Vplot1 = x[3,1*pgrid['nk']:(1*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-
-
-Vplot2 = x[3,2*pgrid['nk']:(2*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot3 = x[3,3*pgrid['nk']:(3*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot4 = x[3,4*pgrid['nk']:(4*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot5 = x[3,5*pgrid['nk']:(5*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot6 = x[3,6*pgrid['nk']:(6*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-Vplot7 = x[3,7*pgrid['nk']:(7*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-
-
-kplot = klin.reshape(pgrid['nk'])
-
-pylab.plot(kplot,Vplot)
-pylab.plot(kplot,Vplot1)
-pylab.plot(kplot,Vplot2)
-pylab.plot(kplot,Vplot3)
-pylab.plot(kplot,Vplot4)
-pylab.plot(kplot,Vplot5)
-pylab.plot(kplot,Vplot6)
-pylab.plot(kplot,Vplot7)
-
-
- 
-
-
-
-import pylab
-
-Vplot = Value[3,4*pgrid['nk']:(4*pgrid['nk']+pgrid['nk'])].reshape(pgrid['nk'])
-kplot = klin.reshape(pgrid['nk'])
-
-pylab.plot(kplot,Vplot)
-
-"""
