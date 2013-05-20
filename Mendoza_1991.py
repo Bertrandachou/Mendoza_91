@@ -22,7 +22,7 @@ p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 1.001 , 'delta': 0.1, 'omega': 1.455
 
 # Then the grids for the stochastic process (transition and values)
 
-p_stoch = {'e': 1.18/100, 'n': 0, 'rho': 0.34, 'rho_en': 0}
+p_stoch = {'ep': 1.18/100, 'n': 0, 'rho': 0, 'rho_en': 0.34}
 
 # We define the parameters of the grids
 
@@ -45,37 +45,38 @@ stoch_transit = np.array([\
 # k, kprime, A, Aprime, the stochastic states (e and n) 
 
 
+# the grid for K
+
 klin =  np.array([np.linspace(pgrid['kmin'],pgrid['kmax'],pgrid['nk'])])
 kgrid_temp = np.repeat( klin , 4 * pgrid['nA'] * pgrid['nA'] * pgrid['nk'], 0 )
 kgrid      = np.reshape(kgrid_temp, (4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk']) )
 
-# or (but apparently the first way is faster)
-#kgrid = np.resize(klin,(4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk'] ))
-
-
-#kplin      = np.repeat(klin, pgrid['nk'], 1)
+# the grid for K'
 
 kpgrid_temp = np.repeat(np.repeat(klin, pgrid['nk'], 1), 4 * pgrid['nA'] * pgrid['nA'], 0)
 kpgrid      = np.reshape(kpgrid_temp, (4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk']) )
 
+# the grid for A
 
 Alin  = np.linspace(pgrid['Amin'],pgrid['Amax'],pgrid['nA'])
 Agrid_temp1 = np.array([np.repeat( Alin , (pgrid['nk']**2) * pgrid['nA'] , 0 )])
 Agrid_temp2 = np.repeat( Agrid_temp1 , 4 , 0 )
 Agrid       = np.reshape( Agrid_temp2 , (4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk']) )
 
+# the grid for A'
 
 Apgrid_temp1 = np.array([np.repeat( Alin , (pgrid['nk']**2)  , 0 )])
 Apgrid_temp2 = np.array([np.repeat( Apgrid_temp1 , pgrid['nA'] , 0 )])
 Apgrid_temp3 = np.repeat( Apgrid_temp2 , 4 , 0 )
 Apgrid       = np.reshape( Apgrid_temp3 , (4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk']) )
 
+# the grid for e (the level of productivity)
 
 egrid = np.zeros ( (4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk']) )
-egrid[0:2].fill(p_stoch['e'])
-egrid[2:].fill(- p_stoch['e'])
+egrid[0:2].fill(p_stoch['ep'])
+egrid[2:].fill(- p_stoch['ep'])
 
-
+# the grid for n (which affects the return on foreign assets)
 
 ngrid = np.zeros ( (4 , pgrid['nA'], pgrid['nA'] , pgrid['nk'] , pgrid['nk']) )
 ngrid[0].fill(p_stoch['n'])
@@ -91,10 +92,10 @@ import numexpr
 
 # a function that computes the optimal labor as a function of k,e and the parameters p
 
-def labour(k,e,p):
+def labour(k,eg,p):
     alpha = p['alpha']
     omega = p['omega']
-    return numexpr.evaluate( '( (1 - alpha) * exp(e) * (k**alpha) ) ** (1 / (alpha + omega- 1))' )
+    return numexpr.evaluate( '( (1 - alpha) * exp(eg) * (k**alpha) ) ** (1 / ( alpha + omega - 1))' )
     
 
 def composite_consumption(c,l,p):
@@ -105,9 +106,8 @@ def composite_consumption(c,l,p):
 
 def utility(cc,p):
     gamma = p['gamma']
-    omega = p['omega']
     if gamma == 1:
-        return numexpr.evaluate( 'log( cc )' )
+        return numexpr.evaluate( 'log(cc)' )
     else:
         return numexpr.evaluate( '( (cc)**(1-gamma) - 1 ) / (1 - gamma)' )
     
@@ -115,16 +115,15 @@ def utility(cc,p):
 
 def discount(cc,p):
     beta = p['beta']
-    omega = p['omega']
     return numexpr.evaluate( 'exp(-beta * log(1 + cc ))' )
     
     
 # production function as a function k, k', l, e and the parameters p
 
-def production(k,kp,l,e,p):
+def production(k,kp,l,eg,p):
     alpha = p['alpha']
     phi   = p['phi']
-    return  numexpr.evaluate( 'exp(e) * (k**alpha) * (l**(1-alpha)) - (phi/2) * (kp - k)**2' )
+    return  numexpr.evaluate( 'exp(eg) * (k**alpha) * (l**(1-alpha)) - (phi/2) * (kp - k)**2' )
     
 
 # we define our grid for value function
@@ -145,7 +144,7 @@ V0  = V0t.reshape( (4 , pgrid['nA'] * pgrid['nk'] ) )
 # on p the grid of parameters
 # on the transition matrix of the stochastic process here called transit
 
-def bud(k,kp,A,Ap,e,n,p,pgrid):
+def bud(k,kp,A,Ap,eg,n,p):
     
     # we first need to compute the instantaneouse utility of the agent for every
     # state and possible decision he can take
@@ -155,9 +154,8 @@ def bud(k,kp,A,Ap,e,n,p,pgrid):
     omeg = p['omega']
     rs   = p['rstar']
     
-    ltemp = labour(k,e,p)
-    ctemp = production(k,kp,ltemp,e,p)\
-    + numexpr.evaluate( '-kp + k * (1 - delt) + (1 + rs * exp(n)) * A - Ap' )
+    ltemp = labour(k,eg,p)
+    ctemp = production(k,kp,ltemp,eg,p) + numexpr.evaluate( '-kp + k * (1 - delt) + (1 + rs * exp(n)) * A - Ap' )
     cltemp =  composite_consumption(ctemp,ltemp,p)
     
     utemp = utility(cltemp,p)  
@@ -189,28 +187,22 @@ def new_value(ut,disc,cl,transit,V,pgrid):
     
 
 
-def find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0):
+def find_value(k,kp,A,Ap,eg,n,p,pgrid,transit,V):
     
     # this function solves for the value function
     # it does not solve for the decision rule for A and k
     # this is done in the find_solution
     
     crit = 10
-    #iteration = 0
-    V01 = V0.copy()
-    x = bud(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid)
+    V01 = V.copy()
+    x = bud(k,kp,A,Ap,eg,n,p)
     
 
     while crit> p['epsilon']:
         
-        #iteration = iteration + 1       
-    
-        TV = new_value(x[0],x[1],x[2],stoch_transit,V01,pgrid)
-    
+        TV = new_value(x[0],x[1],x[2],transit,V01,pgrid)
         crit = abs(V01 - TV).max()
-        # print iteration
         print crit
-    
         V01 = TV
     
     return V01
@@ -221,7 +213,7 @@ Value = find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V
 
 
 
-def find_solution(k,kp,A,Ap,e,n,p,pgrid,transit,V):
+def find_solution(k,kp,A,Ap,eg,n,p,pgrid,transit,V):
     
     # this function performs one more iteration on the value function
     # using this last iteration on the value function we are able to determine
@@ -233,8 +225,8 @@ def find_solution(k,kp,A,Ap,e,n,p,pgrid,transit,V):
     delt = p['delta']
     omeg = p['omega']
     rs   = p['rstar']    
-    ltemp = labour(k,e,p)
-    ctemp = production(k,kp,ltemp,e,p)\
+    ltemp = labour(k,eg,p)
+    ctemp = production(k,kp,ltemp,eg,p)\
     + numexpr.evaluate( '-kp + k * (1 - delt) + (1 + rs * exp(n)) * A - Ap' )
     cltemp =  composite_consumption(ctemp,ltemp,p)
     budget_not = (cltemp <= 0)
@@ -306,7 +298,7 @@ def simulation_output(kpd,Apd,pgrid,transit,nsim,kindex,Aindex,sindex):
     ksim[1] = kpdecided[sindex,Aindex,kindex]
     Asim[1] = Apdecided[sindex,Aindex,kindex]
     
-    for i in range(1,nsim):
+    for i in xrange(1,nsim):
     
         draw = uni(0,1)
         kindex1 = np.where( klin1  == ksim[i] )[0][0]
@@ -359,6 +351,15 @@ kk2 = k[1:ns+1]
 invsim = kk2 - (1 - p['delta']) * kk1
 
 
+product = np.array([1.18/100,1.18/100, -1.18/100, -1.18/100] )
+sp = s.astype(int)
+
+
+l = labour(k[0:ns],product[sp],p)
+
+
+
+
 """
 plt(t[0:ns],invsim)
 
@@ -366,5 +367,9 @@ plt(t[0:ns],invsim)
 
 """
 
-print np.std(k)/np.mean(k)
-print np.std(invsim)/np.mean(invsim)
+print np.std ( k/np.mean(k) )
+print np.std ( invsim/np.mean(invsim) )
+print np.std ( l/np.mean(l) )
+
+
+
