@@ -18,11 +18,11 @@ import time
 
 # First, we define our grid of parameters
 
-p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 1.001 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0, 'epsilon': 10**(-6) }
+p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 2 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0, 'epsilon': 10**(-6) }
 
 # Then the grids for the stochastic process (transition and values)
 
-p_stoch = {'ep': 1.18/100, 'n': 0, 'rho': 0, 'rho_en': 0.34}
+p_stoch = {'ep': 1.18/100, 'n': 0, 'rho': 0.356, 'rho_en': 0}
 
 # We define the parameters of the grids
 
@@ -31,15 +31,22 @@ pgrid = {'kmin': 3.25, 'kmax': 3.56 , 'nk': 22, 'Amin': -1.42 , 'Amax': 0.08 , '
  
 # We build the transition matrix that will be used
 
-Pi          = (p_stoch['rho'] + 1) / 4
+Pi          = (p_stoch['rho_en'] + 1) / 4
 
+stoch_transit = np.array([\
+[(1-p_stoch['rho']) * Pi + p_stoch['rho'], (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * Pi],\
+[(1-p_stoch['rho']) * Pi, (1-p_stoch['rho']) * (0.5 - Pi) + p_stoch['rho'] , (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * Pi],\
+[(1-p_stoch['rho']) * Pi, (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * (0.5 - Pi) + p_stoch['rho'], (1-p_stoch['rho']) * Pi],\
+[(1-p_stoch['rho']) * Pi, (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * Pi + p_stoch['rho']]\
+])
+"""
 stoch_transit = np.array([\
 [(1-p_stoch['rho_en']) * Pi + p_stoch['rho_en'], (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * Pi],\
 [(1-p_stoch['rho_en']) * Pi, (1-p_stoch['rho_en']) * (0.5 - Pi) + p_stoch['rho_en'] , (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * Pi],\
 [(1-p_stoch['rho_en']) * Pi, (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * (0.5 - Pi) + p_stoch['rho_en'], (1-p_stoch['rho_en']) * Pi],\
 [(1-p_stoch['rho_en']) * Pi, (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * Pi + p_stoch['rho_en']]\
 ])
-
+"""
 
 # Given these parameters we build our grids respectively for
 # k, kprime, A, Aprime, the stochastic states (e and n) 
