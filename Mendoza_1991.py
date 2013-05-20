@@ -22,7 +22,7 @@ p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 2 , 'delta': 0.1, 'omega': 1.455, 'b
 
 # Then the grids for the stochastic process (transition and values)
 
-p_stoch = {'ep': 1.18/100, 'n': 0, 'rho': 0.356, 'rho_en': 0}
+p_stoch = {'ep': 1.18/100, 'n': 1.18/100, 'rho': 0.356, 'rho_en': 0}
 
 # We define the parameters of the grids
 
@@ -39,14 +39,7 @@ stoch_transit = np.array([\
 [(1-p_stoch['rho']) * Pi, (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * (0.5 - Pi) + p_stoch['rho'], (1-p_stoch['rho']) * Pi],\
 [(1-p_stoch['rho']) * Pi, (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * (0.5 - Pi), (1-p_stoch['rho']) * Pi + p_stoch['rho']]\
 ])
-"""
-stoch_transit = np.array([\
-[(1-p_stoch['rho_en']) * Pi + p_stoch['rho_en'], (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * Pi],\
-[(1-p_stoch['rho_en']) * Pi, (1-p_stoch['rho_en']) * (0.5 - Pi) + p_stoch['rho_en'] , (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * Pi],\
-[(1-p_stoch['rho_en']) * Pi, (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * (0.5 - Pi) + p_stoch['rho_en'], (1-p_stoch['rho_en']) * Pi],\
-[(1-p_stoch['rho_en']) * Pi, (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * (0.5 - Pi), (1-p_stoch['rho_en']) * Pi + p_stoch['rho_en']]\
-])
-"""
+
 
 # Given these parameters we build our grids respectively for
 # k, kprime, A, Aprime, the stochastic states (e and n) 
@@ -327,56 +320,111 @@ def simulation_output(kpd,Apd,pgrid,transit,nsim,kindex,Aindex,sindex):
     return np.array([ksim,Asim,ssim])
     
 
-ns = 10000
+ns = 50000
     
 simulation_result = simulation_output(kpdecided,Apdecided,pgrid,stoch_transit,ns,10,10,2)
 
 
-#the result of our simulations can simply be expressed by:
+# the result of our simulations can simply be expressed by:
 
 
 k = simulation_result[0]
 A = simulation_result[1]
 s = simulation_result[2]
-    
-# we can plot this on a graph
-    
-
-from pylab import plot as plt
-
-#for capital
-
-t = np.linspace(0, ns ,ns + 1  )
-#plt(t,k) 
 
 
+# From these results we can compute :
 
-#for investment
+
+sp = s.astype(int)
+
+stochastic_e = np.array([p_stoch['ep'],p_stoch ['ep'],-p_stoch ['ep'],-p_stoch ['ep'] ])
+stochastic_n = np.array([p_stoch['n'],-p_stoch ['n'],p_stoch ['n'],-p_stoch ['n'] ])
+
+
+s_e = stochastic_e[sp]
+s_n = stochastic_n[sp]
+
+# Investment
 
 kk1 = k[0:ns]
 kk2 = k[1:ns+1]
-invsim = kk2 - (1 - p['delta']) * kk1
+inv = kk2 - (1 - p['delta']) * kk1
 
+# Hours worked
 
-product = np.array([1.18/100,1.18/100, -1.18/100, -1.18/100] )
 sp = s.astype(int)
+labour_s = labour(k[0:ns],stochastic_e[sp],p)
 
 
-l = labour(k[0:ns],product[sp],p)
+# Output
+
+gdp = production(kk1,kk2,labour_s,s_e,p)
+
+# GNP
+
+gnp = gdp + p['rstar']*s_n*A[0:ns] 
 
 
+# Consumption
+
+consumption = gdp - kk2 + (1 - p['delta'])*kk1 + (1+p['rstar']*s_n)*A[0:ns] - A[1:(ns+1)]
 
 
+# savings 
+
+savings = gdp - consumption
+
+
+# TB / Y 
+
+TB_Y = (A[1:(ns+1)] -(1+p['rstar']*s_n)*A[0:ns]) / gdp 
 """
-plt(t[0:ns],invsim)
 
+# Here are the results for the standard deviations
 
-
-"""
-
+print np.std ( gdp/np.mean(gdp) )
+print np.std ( gnp/np.mean(gnp) )
+print np.std ( consumption/np.mean(consumption) )
+print np.std ( savings/np.mean(savings) )
+print np.std ( inv/np.mean(inv) )
 print np.std ( k/np.mean(k) )
-print np.std ( invsim/np.mean(invsim) )
-print np.std ( l/np.mean(l) )
+print np.std ( labour_s/np.mean(labour_s) )
+print np.std ( TB_Y )
+
+# For the first-order autcorrelations
+
+print np.corrcoef( np.array([gdp[0:ns-1],gdp[1:ns]]) )[0,1] 
+print np.corrcoef( np.array([gnp[0:ns-1],gnp[1:ns]]) )[0,1]  
+print np.corrcoef( np.array([consumption[0:ns-1],consumption[1:ns]]) )[0,1]  
+print np.corrcoef( np.array([savings[0:ns-1],savings[1:ns]]) )[0,1]  
+print np.corrcoef( np.array([inv[0:ns-1],inv[1:ns]]) )[0,1]  
+print np.corrcoef( np.array([k[0:ns-1],k[1:ns]]) )[0,1]  
+print np.corrcoef( np.array([labour_s[0:ns-1],labour_s[1:ns]]) )[0,1]    
+print np.corrcoef( np.array([TB_Y[0:ns-1],TB_Y[1:ns]]) )[0,1]  
+"""
+# correlation with gdp
+
+print np.corrcoef( np.array([gdp,gdp]) )[0,1] 
+print np.corrcoef( np.array([gnp,gdp]) )[0,1]  
+print np.corrcoef( np.array([consumption,gdp]) )[0,1]  
+print np.corrcoef( np.array([savings,gdp]) )[0,1]  
+print np.corrcoef( np.array([inv,gdp]) )[0,1]  
+print np.corrcoef( np.array([k[0:ns],gdp]) )[0,1]  
+print np.corrcoef( np.array([labour_s,gdp]) )[0,1]    
+print np.corrcoef( np.array([TB_Y,gdp]) )[0,1]  
 
 
+"""
+# We can check that the different coefficient of correlations for the stochastic process
 
+# correlation of e and n 
+
+correlation_e_n = np.corrcoef( np.array([s_e,s_n]) )
+
+# auto-correlation of e and n
+
+correlation_e_e = np.corrcoef( np.array([s_e[0:ns-1],s_e[1:ns]]) )
+correlation_n_n = np.corrcoef( np.array([s_n[0:ns-1],s_n[1:ns]]) )
+
+"""
