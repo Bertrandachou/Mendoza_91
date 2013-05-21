@@ -12,14 +12,14 @@ in his paper 'RBC in a small open economy' published in the AER in 1991.
 We use value iteration with vectorization."""
 
 import numpy as np
-
+import time
 # First, we define our grid of parameters
 
-p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 2 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0.028, 'epsilon': 10**(-6) }
+p = {'alpha': 0.32, 'rstar': 0.04, 'gamma': 2 , 'delta': 0.1, 'omega': 1.455, 'beta': 0.11, 'phi': 0, 'epsilon': 10**(-6) }
 
 # Then the grids for the stochastic process (transition and values)
 
-p_stoch = {'ep': 1.29/100, 'n': 0, 'rho': 0.42, 'rho_en': 0}
+p_stoch = {'ep': 1.18/100, 'n': 1.18/100, 'rho': 0.356, 'rho_en': 0}
 
 # We define the parameters of the grids
 
@@ -226,6 +226,7 @@ def find_value(k,kp,A,Ap,eg,n,p,pgrid,transit,V):
         crit = abs(V01 - TV).max()
         #print crit
         V01 = TV
+        
     
     return V01
     
@@ -233,9 +234,10 @@ def find_value(k,kp,A,Ap,eg,n,p,pgrid,transit,V):
 # we then can compute our value function Value
         
 #%prun -s time find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0)
-
+t1 = time.time()
 Value = find_value(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,V0)
-
+t2 = time.time()
+print t2 - t1 
 
 
 def find_solution(k,kp,A,Ap,eg,n,p,pgrid,transit,V):
@@ -282,8 +284,10 @@ def find_solution(k,kp,A,Ap,eg,n,p,pgrid,transit,V):
 
 # From this we get our solutions for k' and A'
 
+t3 = time.time()
 solution = find_solution(kgrid,kpgrid,Agrid,Apgrid,egrid,ngrid,p,pgrid,stoch_transit,Value)
-
+t4 = time.time()
+print t4 - t3 
 kpdecided = solution[0]
 Apdecided = solution[1]
 
@@ -338,7 +342,7 @@ def simulation_output(kpd,Apd,pgrid,transit,nsim,kindex,Aindex,sindex):
     
 # we then determinate the number of simulations
     
-ns = 100000    
+ns = 100    
 simulation_result = simulation_output(kpdecided,Apdecided,pgrid,stoch_transit,ns,10,10,2)
 
 
@@ -443,5 +447,60 @@ correlation_e_n = np.corrcoef( np.array([s_e,s_n]) )
 
 correlation_e_e = np.corrcoef( np.array([s_e[0:ns-1],s_e[1:ns]]) )
 correlation_n_n = np.corrcoef( np.array([s_n[0:ns-1],s_n[1:ns]]) )
+
+"""
+
+"""
+# graphs 
+
+# this plots the graph of simulation for the different variables
+
+import matplotlib.pyplot as plt
+
+t = np.linspace(0,ns-1,ns)
+oneline = np.ones(ns)
+
+plt.figure(1)
+
+plt.subplot(321)
+plt.plot(t,gdp/np.mean(gdp),'r',t,oneline,'k' )
+plt.xlabel('time',fontsize = 12)
+plt.ylabel('GDP' ,fontsize = 12)
+
+plt.subplot(322)
+plt.plot(t,consumption/np.mean(consumption),'r',t,oneline,'k' )
+plt.xlabel('time',fontsize = 12)
+plt.ylabel('Consumption' ,fontsize = 12)
+
+plt.subplot(323)
+plt.plot(t,inv/np.mean(inv),'r',t,oneline,'k' )
+plt.xlabel('time',fontsize = 12)
+plt.ylabel('Investement' ,fontsize = 12)
+
+plt.subplot(324)
+plt.plot(t,k[0:ns]/np.mean(k[0:ns]),'r',t,oneline,'k' )
+plt.xlabel('time',fontsize = 12)
+plt.ylabel('Capital' ,fontsize = 12)
+
+plt.subplot(325)
+plt.plot(t,labour_s/np.mean(labour_s),'r',t,oneline,'k' )
+plt.xlabel('time',fontsize = 12)
+plt.ylabel('Labour' ,fontsize = 12)
+
+plt.tight_layout()
+
+"""
+"""
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+kplot = klin.repeat(pgrid['nA'],0)
+Aplot = Alin.reshape((1,pgrid['nA'])).repeat(pgrid['nk'],0)
+Z = Value[0].reshape((pgrid['nk'],pgrid['nA']))
+
+Axes3D.plot_surface(kplot, Aplot, Value)
 
 """
