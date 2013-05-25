@@ -342,7 +342,7 @@ def simulation_output(kpd,Apd,pgrid,transit,nsim,kindex,Aindex,sindex):
     
 # we then determinate the number of simulations
     
-ns = 100    
+ns = 100000    
 simulation_result = simulation_output(kpdecided,Apdecided,pgrid,stoch_transit,ns,10,10,2)
 
 
@@ -488,19 +488,5 @@ plt.xlabel('time',fontsize = 12)
 plt.ylabel('Labour' ,fontsize = 12)
 
 plt.tight_layout()
-
-"""
-"""
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-
-kplot = klin.repeat(pgrid['nA'],0)
-Aplot = Alin.reshape((1,pgrid['nA'])).repeat(pgrid['nk'],0)
-Z = Value[0].reshape((pgrid['nk'],pgrid['nA']))
-
-Axes3D.plot_surface(kplot, Aplot, Value)
 
 """
